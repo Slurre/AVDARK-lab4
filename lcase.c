@@ -159,19 +159,12 @@ lcase_sse_simple(char *restrict dst, const char *restrict src, size_t len)
          *  - _mm_set1_epi8
          *  - _mm_or_si128 (the por instruction)
          */
-        __m128i *casebit_vec = (__m128i*)my_malloc(16);
-        __m128i *work_vec = (__m128i*)my_malloc(16);
         
-        STORE_SI128(casebit_vec, _mm_set1_epi8(CASE_BIT));
-        
+        const __m128i casebit_vec = _mm_set1_epi8(CASE_BIT);
         for(int i = 0; i < len; i += 16) {
-                STORE_SI128(work_vec, LOAD_SI128((__m128i *)(src + i)));
-                STORE_SI128((__m128i *)(dst + i), _mm_or_si128(LOAD_SI128(work_vec), LOAD_SI128(casebit_vec)));
+                const __m128i work_vec = LOAD_SI128((__m128i *)(src + i));
+                STORE_SI128((__m128i *)(dst + i), _mm_or_si128(work_vec, casebit_vec));
         }
-        
-        my_free(work_vec);
-        my_free(casebit_vec);
-        
 }
 
 static void
@@ -189,33 +182,16 @@ lcase_sse_cond(char *restrict dst, const char *restrict src, size_t len)
          *  - _mm_cmpgt_epi8 (the pcmpgtb instruction)
          *  - _mm_and_si128 (the pand instruction)
          */
-
-        __m128i *casebit_vec = (__m128i*)my_malloc(16);
-        __m128i *casebit_or_zero = (__m128i*)my_malloc(16);
-        __m128i *A_vec = (__m128i*)my_malloc(16);
-        __m128i *Z_vec = (__m128i*)my_malloc(16);
-        __m128i *work_vec = (__m128i*)my_malloc(16);
-
-        STORE_SI128(casebit_vec, _mm_set1_epi8(CASE_BIT));
-        STORE_SI128(A_vec, _mm_set1_epi8('A' - 1));
-        STORE_SI128(Z_vec, _mm_set1_epi8('Z' + 1));
+        const __m128i casebit_vec = _mm_set1_epi8(CASE_BIT);
+        const __m128i A_vec = _mm_set1_epi8('A' - 1);
+        const __m128i Z_vec = _mm_set1_epi8('Z' + 1);
+        __m128i casebit_or_zero;
 
         for(int i = 0; i < len; i += 16) {
-                STORE_SI128(work_vec, LOAD_SI128((__m128i *)(src + i)));
-                STORE_SI128(casebit_or_zero, _mm_and_si128(
-                                                _mm_and_si128(
-                                                    _mm_cmpgt_epi8(LOAD_SI128(work_vec), LOAD_SI128(A_vec)), 
-                                                    _mm_cmpgt_epi8(LOAD_SI128(Z_vec), LOAD_SI128(work_vec))), 
-                                                LOAD_SI128(casebit_vec)));
-
-                STORE_SI128((__m128i *)(dst + i), _mm_or_si128(LOAD_SI128(work_vec), LOAD_SI128(casebit_or_zero)));
+                const __m128i work_vec = LOAD_SI128((__m128i *)(src + i));
+                casebit_or_zero = _mm_and_si128(_mm_and_si128(_mm_cmpgt_epi8(work_vec, A_vec), _mm_cmpgt_epi8(Z_vec, work_vec)), casebit_vec);
+                STORE_SI128((__m128i *)(dst + i), _mm_or_si128(work_vec, casebit_or_zero));
         }
-
-        my_free(work_vec);
-        my_free(Z_vec);
-        my_free(A_vec);
-        my_free(casebit_or_zero);
-        my_free(casebit_vec);
 
 }
 
