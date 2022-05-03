@@ -29,12 +29,12 @@
 
 #define MINDEX(n, m) (((n) << SIZE2) | (m))
 
-#define XMM_ALIGNMENT_BYTES 16 
+#define XMM_ALIGNMENT_BYTES 16
 
-static float *mat_a __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
-static float *vec_b __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
-static float *vec_c __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
-static float *vec_ref __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
+static float *mat_a __attribute__((aligned(XMM_ALIGNMENT_BYTES)));
+static float *vec_b __attribute__((aligned(XMM_ALIGNMENT_BYTES)));
+static float *vec_c __attribute__((aligned(XMM_ALIGNMENT_BYTES)));
+static float *vec_ref __attribute__((aligned(XMM_ALIGNMENT_BYTES)));
 
 static void
 matvec_sse()
@@ -56,6 +56,28 @@ matvec_sse()
          * HINT: You can create the sum of all elements in a vector
          * using two hadd instructions.
          */
+
+        for (int c = 0; c < SIZE; c += 4){
+                const __m128 v_b_part = _mm_load_ps(&vec_b[c]);
+                for (int r = 0; r < SIZE; r++){
+                        const __m128 mat_row_part = _mm_load_ps(&mat_a[MINDEX(r, c)]);
+                        const __m128 res_vec = _mm_dp_ps(mat_row_part, v_b_part, 0xF1);
+
+                        /*if(r % 4 == 0){
+                                if(r != 0){
+                                        __m128 dumb = _mm_load_ps(&vec_c[r]);
+                                        dumb = _mm_add_ps(res_vec, res_vec);    
+                                        _mm_store_ps(&vec_c[r], dumb);
+                                }
+                        }
+                        */
+
+                        vec_c[r] += _mm_cvtss_f32(res_vec);
+                        
+                }
+
+        }
+                        
 }
 
 /**
@@ -82,10 +104,9 @@ verify_result()
         int i;
 
         e_sum = 0;
-        for (i = 0; i < SIZE; i++) {
-                e_sum += vec_c[i] < vec_ref[i] ?
-                        vec_ref[i] - vec_c[i] :
-                        vec_c[i] - vec_ref[i];
+        for (i = 0; i < SIZE; i++)
+        {
+                e_sum += vec_c[i] < vec_ref[i] ? vec_ref[i] - vec_c[i] : vec_c[i] - vec_ref[i];
         }
 
         printf("e_sum: %.e\n", e_sum);
@@ -109,12 +130,14 @@ init()
         vec_c = _mm_malloc(sizeof(*vec_c) * SIZE, XMM_ALIGNMENT_BYTES);
         vec_ref = _mm_malloc(sizeof(*vec_ref) * SIZE, XMM_ALIGNMENT_BYTES);
 
-        if (!mat_a || !vec_b || !vec_c || !vec_ref) {
+        if (!mat_a || !vec_b || !vec_c || !vec_ref)
+        {
                 fprintf(stderr, "Memory allocation failed\n");
                 abort();
         }
 
-        for (i = 0; i < SIZE; i++) {
+        for (i = 0; i < SIZE; i++)
+        {
                 for (j = 0; j < SIZE; j++)
                         mat_a[MINDEX(i, j)] = ((7 * i + j) & 0x0F) * 0x1P-2F;
                 vec_b[i] = ((i * 17) & 0x0F) * 0x1P-2F;
@@ -150,24 +173,26 @@ run_multiply()
         printf("Speedup: %.2f\n",
                runtime_ref / runtime_sse);
 
-
-        if (verify_result()) {
+        if (verify_result())
+        {
                 printf("OK\n");
                 return 0;
-        } else {
+        }
+        else
+        {
                 printf("MISMATCH\n");
                 return 1;
         }
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
         /* Initialize the matrices with some "random" data. */
         init();
 
         int rc = run_multiply();
-        if (rc) return 1;
+        if (rc)
+                return 1;
 
         _mm_free(mat_a);
         _mm_free(vec_b);
@@ -176,7 +201,6 @@ main(int argc, char *argv[])
 
         return 0;
 }
-
 
 /*
  * Local Variables:

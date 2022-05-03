@@ -24,7 +24,7 @@
 #include "util.h"
 
 #define CASE_BIT 0x20
-#define XMM_ALIGNMENT_BYTES 16 
+#define XMM_ALIGNMENT_BYTES 16
 
 /* Use align data if required by the access type */
 #define ALIGN_AS_REQUIRED 1
