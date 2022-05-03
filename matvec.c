@@ -57,27 +57,18 @@ matvec_sse()
          * using two hadd instructions.
          */
 
-        for (int c = 0; c < SIZE; c += 4){
-                const __m128 v_b_part = _mm_load_ps(&vec_b[c]);
-                for (int r = 0; r < SIZE; r++){
-                        const __m128 mat_row_part = _mm_load_ps(&mat_a[MINDEX(r, c)]);
-                        const __m128 res_vec = _mm_dp_ps(mat_row_part, v_b_part, 0xF1);
-
-                        /*if(r % 4 == 0){
-                                if(r != 0){
-                                        __m128 dumb = _mm_load_ps(&vec_c[r]);
-                                        dumb = _mm_add_ps(res_vec, res_vec);    
-                                        _mm_store_ps(&vec_c[r], dumb);
-                                }
-                        }
-                        */
-
-                        vec_c[r] += _mm_cvtss_f32(res_vec);
-                        
+        for (int r = 0; r < SIZE; r++){
+                __m128 res=_mm_setzero_ps();
+                for (int c = 0; c < SIZE; c += 4){
+                        __m128 mat_row_part = _mm_load_ps(&mat_a[MINDEX(r, c)]);
+                        __m128 v_b_part = _mm_load_ps(&vec_b[c]);
+                        __m128 res_vec = _mm_mul_ps(v_b_part, mat_row_part);
+                        res = _mm_add_ps(res_vec, res); //optimization
                 }
-
+                res = _mm_hadd_ps(res, res);
+                res = _mm_hadd_ps(res, res);
+                vec_c[r] = _mm_cvtss_f32(res);
         }
-                        
 }
 
 /**

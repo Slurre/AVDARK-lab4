@@ -82,6 +82,8 @@ matmul_sse_block(int i, int j, int k)
          * parameter can be used to restrict to which elements the
          * result is stored, all other elements are set to zero.
          */
+
+
 }
 
 /**
@@ -280,8 +282,6 @@ matmul_sse()
 static void
 matmul_sse()
 {
-        int i, j, k;
-
         /* Assume that the data size is an even multiple of the 128 bit
          * SSE vectors (i.e. 4 floats) */
         assert(!(SIZE & 0x3));
@@ -289,6 +289,21 @@ matmul_sse()
         /* TASK: Implement your simple matrix multiplication using SSE
          * here. (Multiply mat_a and mat_b into mat_c.)
          */
+
+         for (int i = 0; i < SIZE; i++){
+                for (int k = 0; k < SIZE; k++){ 
+                        for (int j = 0; j < SIZE; j += 4){
+                                /* Load value vector of left matrix */
+                                __m128 left_mat_val = _mm_set1_ps(mat_a[i][k]);
+                                __m128 right_mat = _mm_load_ps(&mat_b[k][j]);
+                                __m128 res_vec = _mm_mul_ps(left_mat_val, right_mat);
+                                __m128 accum_vec =_mm_load_ps(&mat_c[i][j]);
+                                _mm_store_ps(&mat_c[i][j], _mm_add_ps(accum_vec, res_vec));
+
+                        }
+                }
+        }
+
 }
 
 #else
