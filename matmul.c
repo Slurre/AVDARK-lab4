@@ -93,17 +93,28 @@ matmul_sse_block(int i, int j, int k)
         row_arr[2] = _mm_load_ps(&mat_b[k+2][j]); 
         row_arr[3] = _mm_load_ps(&mat_b[k+3][j]);  
 
-        // transpose block
+        // transpose block of right matrix 
         _MM_TRANSPOSE4_PS(row_arr[0], row_arr[1], row_arr[2], row_arr[3]);
 
+        // For every row in the left matrix block
         for(int br=0; br < SSE_BLOCK_SIZE; br++){
+
+                // Load in the left matrix chunk
                 __m128 mat_a_res = _mm_load_ps(&mat_a[i + br][k]);
+
+                // Load result matrix chunk as vector (for adding partial results)
                 __m128 cur_res = _mm_load_ps(&mat_c[i + br][j]);
 
+                // For every column in the right matrix block
                 for(int bk=0; bk < SSE_BLOCK_SIZE; bk++){
+
+                        // Calculate the partial result and add (at different positions
+                        // corresponding to the column to which the result belongs)
                         __m128 resvec = _mm_dp_ps(mat_a_res, row_arr[bk], 0xF0 | (1 << bk));
                         cur_res = _mm_add_ps(cur_res, resvec);     
                 }
+
+                // Store the 4 new results in result matrix
                 _mm_store_ps(&mat_c[i + br][j], cur_res);
         }
 
