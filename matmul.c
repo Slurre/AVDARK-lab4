@@ -82,6 +82,41 @@ matmul_sse_block(int i, int j, int k)
          * parameter can be used to restrict to which elements the
          * result is stored, all other elements are set to zero.
          */
+        int br, bk;
+
+        __m128 row_arr[4]; 
+        
+
+        // get rows of right matrix
+        row_arr[0] = _mm_load_ps(&mat_b[k][j]);
+        row_arr[1] = _mm_load_ps(&mat_b[k+1][j]); 
+        row_arr[2] = _mm_load_ps(&mat_b[k+2][j]); 
+        row_arr[3] = _mm_load_ps(&mat_b[k+3][j]);  
+
+        // transpose block
+        _MM_TRANSPOSE4_PS(row_arr[0], row_arr[1], row_arr[2], row_arr[3]);
+
+        for(int br=0; br < SSE_BLOCK_SIZE; br++){
+                __m128 mat_a_res = _mm_load_ps(&mat_a[i + br][k]);
+                __m128 cur_res = _mm_load_ps(&mat_c[i + br][j]);
+
+                __m128 resvec = _mm_dp_ps(mat_a_res, row_arr[0], 0xF1);
+                cur_res = _mm_add_ps(cur_res, resvec);
+
+                resvec = _mm_dp_ps(mat_a_res, row_arr[1], 0xF2);
+                cur_res = _mm_add_ps(cur_res, resvec);
+
+                resvec = _mm_dp_ps(mat_a_res, row_arr[2], 0xF4);
+                cur_res = _mm_add_ps(cur_res, resvec);
+
+                resvec = _mm_dp_ps(mat_a_res, row_arr[3], 0xF8);
+                cur_res = _mm_add_ps(cur_res, resvec);
+                
+                _mm_store_ps(&mat_c[i + br][j], cur_res);
+        }
+
+        
+
 
 
 }
@@ -293,10 +328,16 @@ matmul_sse()
          for (int i = 0; i < SIZE; i++){
                 for (int k = 0; k < SIZE; k++){ 
                         for (int j = 0; j < SIZE; j += 4){
-                                /* Load value vector of left matrix */
-                                __m128 left_mat_val = _mm_set1_ps(mat_a[i][k]);
-                                __m128 right_mat = _mm_load_ps(&mat_b[k][j]);
-                                __m128 res_vec = _mm_mul_ps(left_mat_val, right_mat);
+                                /* All elements on row Q of right matrix will at some point be multiplied 
+                                   with element N, Q of left matrix. Go through each matrix element of the 
+                                   left matrix and perform all multiplications (row by row, chunk by chunk)
+                                   with the right matrix.  
+                                */
+                                __m128 left_mat_val = _mm_set1_ps(mat_a[i][k]);         // Value of left matrix
+                                __m128 right_mat = _mm_load_ps(&mat_b[k][j]);           // Row chunk of right matrix 
+                                __m128 res_vec = _mm_mul_ps(left_mat_val, right_mat);   
+
+                                /* Store result */
                                 __m128 accum_vec =_mm_load_ps(&mat_c[i][j]);
                                 _mm_store_ps(&mat_c[i][j], _mm_add_ps(accum_vec, res_vec));
 
