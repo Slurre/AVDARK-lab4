@@ -85,7 +85,6 @@ matmul_sse_block(int i, int j, int k)
         int br, bk;
 
         __m128 row_arr[4]; 
-        
 
         // get rows of right matrix
         row_arr[0] = _mm_load_ps(&mat_b[k][j]);
@@ -117,10 +116,6 @@ matmul_sse_block(int i, int j, int k)
                 // Store the 4 new results in result matrix
                 _mm_store_ps(&mat_c[i + br][j], cur_res);
         }
-
-        
-
-
 
 }
 

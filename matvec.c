@@ -57,18 +57,38 @@ matvec_sse()
          * using two hadd instructions.
          */
 
+        // For each row
         for (int r = 0; r < SIZE; r++){
                 __m128 res=_mm_setzero_ps();
+
+                // For each column chunk
                 for (int c = 0; c < SIZE; c += 4){
+
+                        // Load left matrix chunk into vector
                         __m128 mat_row_part = _mm_load_ps(&mat_a[MINDEX(r, c)]);
+
+                        // Load correponding array section into vector
                         __m128 v_b_part = _mm_load_ps(&vec_b[c]);
+
+                        // Multiply all elements in chunk
                         __m128 res_vec = _mm_mul_ps(v_b_part, mat_row_part);
+
+                        // Accumulate products (all products of inner loop should be added)
                         res = _mm_add_ps(res_vec, res); //optimization
                 }
+
+                // Reduce contents to single number and save in result vector
                 res = _mm_hadd_ps(res, res);
                 res = _mm_hadd_ps(res, res);
                 vec_c[r] = _mm_cvtss_f32(res);
         }
+
+        /* 
+        OPTIMIZATION:
+        First approach was to do the adding to a single number within the inner for loop,
+        thus calculating and adding the partial sum of each chunk. The optimization was
+        to keep adding the products in a vector which is then reduced outside the loop. 
+        */ 
 }
 
 /**
