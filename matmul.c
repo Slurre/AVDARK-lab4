@@ -100,18 +100,10 @@ matmul_sse_block(int i, int j, int k)
                 __m128 mat_a_res = _mm_load_ps(&mat_a[i + br][k]);
                 __m128 cur_res = _mm_load_ps(&mat_c[i + br][j]);
 
-                __m128 resvec = _mm_dp_ps(mat_a_res, row_arr[0], 0xF1);
-                cur_res = _mm_add_ps(cur_res, resvec);
-
-                resvec = _mm_dp_ps(mat_a_res, row_arr[1], 0xF2);
-                cur_res = _mm_add_ps(cur_res, resvec);
-
-                resvec = _mm_dp_ps(mat_a_res, row_arr[2], 0xF4);
-                cur_res = _mm_add_ps(cur_res, resvec);
-
-                resvec = _mm_dp_ps(mat_a_res, row_arr[3], 0xF8);
-                cur_res = _mm_add_ps(cur_res, resvec);
-                
+                for(int bk=0; bk < SSE_BLOCK_SIZE; bk++){
+                        __m128 resvec = _mm_dp_ps(mat_a_res, row_arr[bk], 0xF0 | (1 << bk));
+                        cur_res = _mm_add_ps(cur_res, resvec);     
+                }
                 _mm_store_ps(&mat_c[i + br][j], cur_res);
         }
 
